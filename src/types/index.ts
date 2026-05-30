@@ -1,4 +1,5 @@
 import type { AxiosInstance } from 'axios';
+export type { PaymentFilters } from './payments.js';
 
 export interface PayNexusConfig {
   secretKey: string;
@@ -161,4 +162,5 @@ export interface PollOptions {
 
 export interface RequestOptions {
   signal?: AbortSignal;
+  usePublicKey?: boolean;
 }

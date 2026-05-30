@@ -1,0 +1,1 @@
+{"version":3,"file":"WebhookVerificationError.d.ts","sourceRoot":"","sources":["../../src/errors/WebhookVerificationError.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,aAAa,EAAE,MAAM,oBAAoB,CAAC;AAEnD,qBAAa,wBAAyB,SAAQ,aAAa;gBAC7C,OAAO,GAAE,MAAgD,EAAE,SAAS,CAAC,EAAE,MAAM;CAK1F"}

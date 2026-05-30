@@ -9,14 +9,15 @@ export const DEFAULT_CONFIG = {
   autoIdempotency: true,
   pollInterval: 3000, // 3 seconds
   pollTimeout: 120000, // 2 minutes
-  webhookTolerance: 300, // 5 minutes
+  webhookTolerance: 300000, // 5 minutes in milliseconds
 } as const;
 
-export const WEBHOOK_TOLERANCE = 300; // 5 minutes
+export const WEBHOOK_TOLERANCE = 300000; // 5 minutes in milliseconds
 
 export const HTTP_HEADERS = {
-  ACCEPT: 'application/json',
-  CONTENT_TYPE: 'application/json',
+  ACCEPT: 'Accept',
+  CONTENT_TYPE: 'Content-Type',
+  JSON: 'application/json',
 } as const;
 
 export const PAYMENT_STATUS = {

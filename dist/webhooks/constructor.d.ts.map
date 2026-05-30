@@ -1,0 +1,1 @@
+{"version":3,"file":"constructor.d.ts","sourceRoot":"","sources":["../../src/webhooks/constructor.ts"],"names":[],"mappings":"AAEA,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,sBAAsB,CAAC;AAEzD,qBAAa,kBAAkB;IAC7B,OAAO,CAAC,QAAQ,CAAkB;gBAEtB,MAAM,EAAE,MAAM;IAI1B,cAAc,CAAC,OAAO,EAAE,MAAM,EAAE,SAAS,EAAE,MAAM,EAAE,SAAS,CAAC,EAAE,MAAM,GAAG,YAAY;CAmBrF"}

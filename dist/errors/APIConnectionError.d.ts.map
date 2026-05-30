@@ -1,0 +1,1 @@
+{"version":3,"file":"APIConnectionError.d.ts","sourceRoot":"","sources":["../../src/errors/APIConnectionError.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,aAAa,EAAE,MAAM,oBAAoB,CAAC;AAEnD,qBAAa,kBAAmB,SAAQ,aAAa;gBACvC,OAAO,GAAE,MAA4C,EAAE,SAAS,CAAC,EAAE,MAAM;CAKtF"}

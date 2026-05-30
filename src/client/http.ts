@@ -31,7 +31,8 @@ export class HttpClient {
         baseURL: baseUrl,
         timeout,
         headers: {
-          [HTTP_HEADERS.ACCEPT]: HTTP_HEADERS.CONTENT_TYPE,
+          [HTTP_HEADERS.ACCEPT]: HTTP_HEADERS.JSON,
+          [HTTP_HEADERS.CONTENT_TYPE]: HTTP_HEADERS.JSON,
           'User-Agent': `PayNexus-Node/${SDK_VERSION}`,
           'X-PayNexus-SDK': 'node',
           'X-PayNexus-Version': SDK_VERSION,
@@ -164,7 +165,12 @@ export class HttpClient {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise<void>((resolve) => {
+      const timer = globalThis.setTimeout(resolve, ms);
+      if (typeof timer === 'object' && timer !== null && 'unref' in timer) {
+        timer.unref();
+      }
+    });
   }
 
   getAxiosInstance(): AxiosInstance {

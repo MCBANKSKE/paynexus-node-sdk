@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHmac } from 'crypto';
 import { DEFAULT_CONFIG } from '../utils/constants.js';
 
 export class WebhookVerifier {
@@ -24,7 +24,7 @@ export class WebhookVerifier {
   }
 
   calculateSignature(payload: string): string {
-    return createHash('sha256').update(payload).digest('hex');
+    return createHmac('sha256', this.secret).update(payload).digest('hex');
   }
 
   private timingSafeEqual(a: string, b: string): boolean {
