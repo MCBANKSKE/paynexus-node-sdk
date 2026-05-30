@@ -41,8 +41,6 @@ export interface InitiatePaymentParams {
   phone: string;
   /** Optional description shown on the STK prompt. */
   description?: string;
-  /** Optional account reference (max 12 chars). */
-  account_reference?: string;
 }
 
 export interface PaymentData {
@@ -70,7 +68,6 @@ export interface Payment {
   provider_request_id: string | null;
   provider_reference: string | null;
   provider_transaction_id: string | null;
-  account_reference: string | null;
   description: string | null;
   payer_name: string | null;
   failure_reason: string | null;

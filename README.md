@@ -78,7 +78,6 @@ const result = await paynexus.payments.initiate({
   amount: 500,
   phone: '254712345678',
   description: 'Order payment',
-  account_reference: 'INV-001',  // Optional, max 12 chars
 });
 
 // Check payment status by reference
