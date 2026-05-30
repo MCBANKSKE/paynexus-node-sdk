@@ -1,20 +1,50 @@
-# PayNexus Node.js SDK
+<div align="center">
 
-Official Node.js SDK for the [PayNexus](https://www.paynexus.co.ke) payment platform. Accept M-Pesa STK Push payments, manage webhooks, and query merchant data from your Node.js application.
+# 💳 PayNexus Node.js SDK
 
-## Installation
+**Official Node.js SDK for the [PayNexus](https://www.paynexus.co.ke) payment platform**
+
+Accept M-Pesa STK Push payments, manage webhooks, and query merchant data from your Node.js application.
+
+[![npm version](https://badge.fury.io/js/paynexus.svg)](https://www.npmjs.com/package/paynexus)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green)](https://nodejs.org)
+
+</div>
+
+---
+
+## ✨ Features
+
+- 🚀 **Simple & Intuitive** - Clean, developer-friendly API design
+- 🔒 **Type-Safe** - Full TypeScript support with exported types
+- ⚡ **Fast & Reliable** - Built on modern HTTP with timeout handling
+- 🔔 **Webhook Support** - Easy webhook verification with middleware
+- 🛡️ **Error Handling** - Typed errors for precise error handling
+- 📱 **M-Pesa Integration** - Seamless STK Push payment processing
+- 🔑 **API Key Management** - Create, update, and manage API keys
+- 📊 **Merchant Data** - Query businesses and payment accounts
+
+---
+
+## 📦 Installation
 
 ```bash
 npm install paynexus
 ```
 
-Requires Node.js 18 or later.
+**Requirements:** Node.js 18 or later
 
-## Setup
+---
+
+## 🚀 Quick Start
+
+### 🔑 Setup
 
 Get your API keys from the [PayNexus dashboard](https://www.paynexus.co.ke).
 
-### 1. Create a `.env` file
+#### 1️⃣ Create a `.env` file
 
 ```bash
 # .env
@@ -22,13 +52,13 @@ PAYNEXUS_SECRET_KEY=sk_live_your_secret_key
 PAYNEXUS_WEBHOOK_SECRET=whsec_your_webhook_secret   # Only needed if using webhooks
 ```
 
-### 2. Install `dotenv`
+#### 2️⃣ Install `dotenv`
 
 ```bash
 npm install dotenv
 ```
 
-### 3. Initialise the client
+#### 3️⃣ Initialise the client
 
 ```typescript
 import 'dotenv/config';
@@ -40,11 +70,11 @@ const paynexus = new PayNexus({
 });
 ```
 
-> **Framework users:** Next.js, Nuxt, and Remix load `.env` automatically — skip `dotenv`.
+> 💡 **Framework users:** Next.js, Nuxt, and Remix load `.env` automatically — skip `dotenv`.
 
 ---
 
-## Quick Start — Accept a Payment
+### 💰 Accept a Payment
 
 ```typescript
 const payment = await paynexus.payments.initiate({
@@ -67,9 +97,9 @@ console.log(payment.data);
 
 ---
 
-## API Reference
+## 📚 API Reference
 
-### Payments
+### 💳 Payments
 
 ```typescript
 // Initiate STK Push
@@ -101,7 +131,7 @@ const list = await paynexus.payments.list({
 });
 ```
 
-### Webhooks
+### 🔔 Webhooks
 
 ```typescript
 // Register a new webhook
@@ -127,7 +157,7 @@ await paynexus.webhooks.delete(hook.data!.id);
 **Available webhook events:**
 
 | Event | Description |
-|---|---|
+|-------|-------------|
 | `payment.completed` | Payment succeeded |
 | `payment.failed` | Payment failed |
 | `payment.initiated` | STK Push sent to customer |
@@ -139,7 +169,7 @@ await paynexus.webhooks.delete(hook.data!.id);
 | `subscription.created` | Subscription created |
 | `subscription.canceled` | Subscription canceled |
 
-### Merchant
+### 🏪 Merchant
 
 ```typescript
 // Get your merchant info
@@ -152,7 +182,7 @@ const businesses = await paynexus.merchant.businesses();
 const accounts = await paynexus.merchant.paymentAccounts();
 ```
 
-### API Keys
+### 🔑 API Keys
 
 ```typescript
 // Create a new API key
@@ -178,11 +208,11 @@ await paynexus.apiKeys.delete(key.data!.id);
 
 ---
 
-## Webhook Verification
+## 🔐 Webhook Verification
 
 PayNexus signs every webhook with HMAC-SHA256. Verify incoming webhooks to ensure they are authentic:
 
-### Option A — Manual verification
+### Option A — Manual Verification
 
 ```typescript
 import PayNexus from 'paynexus';
@@ -209,7 +239,7 @@ switch (event.event) {
 }
 ```
 
-### Option B — Express middleware
+### Option B — Express Middleware
 
 ```typescript
 import express from 'express';
@@ -229,7 +259,7 @@ app.post(
 );
 ```
 
-### Option C — Standalone `verifyWebhookSignature`
+### Option C — Standalone Function
 
 ```typescript
 import { verifyWebhookSignature } from 'paynexus';
@@ -241,7 +271,7 @@ const event = verifyWebhookSignature(rawBody, signature, timestamp, webhookSecre
 
 ---
 
-## Error Handling
+## ⚠️ Error Handling
 
 The SDK throws typed errors you can catch individually:
 
@@ -274,7 +304,7 @@ try {
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
 ```typescript
 const paynexus = new PayNexus({
@@ -298,13 +328,13 @@ const payment = await paynexus.payments.getByReference('PAY-123', {
 
 ---
 
-## Authentication
+## 🔑 Authentication
 
 The SDK authenticates using your secret API key (`sk_...`) sent via the `X-API-Key` header. Secret keys have write access (payments, webhooks, API key management). Never expose your secret key in client-side code.
 
 ---
 
-## TypeScript
+## 📘 TypeScript
 
 The SDK is written in TypeScript and exports all types:
 
@@ -329,6 +359,22 @@ import type {
 
 ---
 
-## License
+## 📄 License
 
-MIT
+MIT © [PayNexus](https://www.paynexus.co.ke)
+
+---
+
+## 🤝 Support
+
+- 📖 [Documentation](https://www.paynexus.co.ke/docs)
+- 🐛 [Report Issues](https://github.com/paynexus/paynexus-node-sdk/issues)
+- 💬 [Contact Support](https://www.paynexus.co.ke/contact)
+
+---
+
+<div align="center">
+
+**Built with ❤️ by [PayNexus](https://www.paynexus.co.ke)**
+
+</div>
