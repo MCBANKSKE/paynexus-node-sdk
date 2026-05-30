@@ -1,0 +1,84 @@
+{
+  "name": "@paynexus/node",
+  "version": "1.0.0",
+  "description": "PayNexus Node.js SDK - Accept M-Pesa STK Push payments with a professional, Stripe-like developer experience",
+  "keywords": [
+    "paynexus",
+    "payment",
+    "mpesa",
+    "stk-push",
+    "payment-gateway",
+    "kenya",
+    "mobile-money",
+    "typescript"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./webhooks": {
+      "types": "./dist/webhooks.d.ts",
+      "import": "./dist/webhooks.js",
+      "require": "./dist/webhooks.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src --ext .ts",
+    "prepublishOnly": "npm run build"
+  },
+  "bin": {
+    "paynexus": "./dist/cli/index.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "eventemitter3": "^5.0.0",
+    "commander": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "@types/express": "^4.17.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0"
+  },
+  "peerDependencies": {
+    "express": "^4.18.0"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MCBANKSKE/paynexus-node-sdk"
+  },
+  "homepage": "https://www.paynexus.co.ke",
+  "author": "PayNexus <support@paynexus.co.ke>",
+  "bugs": {
+    "url": "https://github.com/MCBANKSKE/paynexus-node-sdk/issues"
+  }
+}
