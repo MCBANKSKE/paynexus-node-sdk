@@ -1,55 +1,95 @@
-import { PayNexusClient } from './client/PayNexusClient.js';
+import { HttpClient } from './http.js';
+import { PaymentsResource } from './resources/payments.js';
+import { WebhooksResource } from './resources/webhooks.js';
+import { MerchantResource } from './resources/merchant.js';
+import { ApiKeysResource } from './resources/apiKeys.js';
+import { verifyWebhookSignature } from './webhooks/verify.js';
+import type { PayNexusConfig, WebhookPayload } from './types.js';
+import type { VerifyOptions } from './webhooks/verify.js';
 
-export { PayNexusClient } from './client/PayNexusClient.js';
-export { HttpClient } from './client/http.js';
-export { PaymentsResource } from './client/resources/payments.js';
-export { MerchantResource } from './client/resources/merchant.js';
-export { WebhooksResource } from './client/resources/webhooks.js';
-export { PayNexusEventEmitter } from './events/EventEmitter.js';
-export { WebhookVerifier } from './webhooks/verifier.js';
-export { WebhookConstructor } from './webhooks/constructor.js';
-export { createWebhookMiddleware } from './webhooks/middleware.js';
+const DEFAULT_BASE_URL = 'https://api.paynexus.co.ke/api';
+const DEFAULT_TIMEOUT = 30_000;
+
+export class PayNexus {
+  readonly payments: PaymentsResource;
+  readonly webhooks: WebhooksResource;
+  readonly merchant: MerchantResource;
+  readonly apiKeys: ApiKeysResource;
+
+  private readonly webhookSecret?: string;
+
+  constructor(config: PayNexusConfig) {
+    if (!config.secretKey) {
+      throw new Error('PayNexus: secretKey is required');
+    }
+
+    const http = new HttpClient({
+      baseUrl: config.baseUrl ?? DEFAULT_BASE_URL,
+      secretKey: config.secretKey,
+      timeout: config.timeout ?? DEFAULT_TIMEOUT,
+    });
+
+    this.payments = new PaymentsResource(http);
+    this.webhooks = new WebhooksResource(http);
+    this.merchant = new MerchantResource(http);
+    this.apiKeys = new ApiKeysResource(http);
+    this.webhookSecret = config.webhookSecret;
+  }
+
+  /**
+   * Verify and parse an incoming webhook.
+   *
+   * @param rawBody   Raw request body string.
+   * @param signature Value of the `X-PayNexus-Signature` header.
+   * @param timestamp Value of the `X-PayNexus-Timestamp` header.
+   * @param options   Optional settings (e.g. custom tolerance).
+   */
+  verifyWebhook(rawBody: string, signature: string, timestamp: string, options?: VerifyOptions): WebhookPayload {
+    if (!this.webhookSecret) {
+      throw new Error('PayNexus: webhookSecret is required to verify webhooks');
+    }
+    return verifyWebhookSignature(rawBody, signature, timestamp, this.webhookSecret, options);
+  }
+}
+
+// Default export for convenient `import PayNexus from 'paynexus'`
+export default PayNexus;
+
+// Re-export everything consumers might need
+export type {
+  PayNexusConfig,
+  ApiResponse,
+  Pagination,
+  InitiatePaymentParams,
+  PaymentData,
+  Payment,
+  PaymentAccountSummary,
+  PaymentStatus,
+  StatusByCheckoutIdParams,
+  ListPaymentsParams,
+  WebhookEvent,
+  RegisterWebhookParams,
+  UpdateWebhookParams,
+  Webhook,
+  WebhookPayload,
+  Merchant,
+  Business,
+  PaymentAccount,
+  CreateApiKeyParams,
+  UpdateApiKeyParams,
+  ApiKey,
+  RequestOptions,
+} from './types.js';
 
 export {
   PayNexusError,
   AuthenticationError,
   ValidationError,
   RateLimitError,
-  APIConnectionError,
+  NotFoundError,
   WebhookVerificationError,
 } from './errors/index.js';
 
-export type {
-  PayNexusConfig,
-  InitiatePaymentData,
-  PaymentData,
-  PaymentResponse,
-  PaymentsListResponse,
-  MerchantResponse,
-  BusinessesResponse,
-  PaymentAccountsResponse,
-  WebhookResponse,
-  WebhooksListResponse,
-  UpdateWebhookData,
-  DeleteResponse,
-  PollOptions,
-  RequestOptions,
-  PaymentFilters,
-} from './types/index.js';
-
-export type {
-  PaymentCompletedWebhook,
-  PaymentFailedWebhook,
-  WebhookEvent,
-} from './types/webhooks.js';
-
-export type { PaymentEventData } from './events/EventEmitter.js';
-
-export type { WebhookMiddlewareOptions } from './webhooks/middleware.js';
-
-export { DEFAULT_CONFIG, SDK_VERSION, PAYMENT_STATUS, WEBHOOK_EVENTS } from './utils/constants.js';
-export { generateIdempotencyKey } from './utils/idempotency.js';
-export { Logger } from './utils/logger.js';
-
-// Default export for convenience
-export default PayNexusClient;
+export { verifyWebhookSignature } from './webhooks/verify.js';
+export { webhookMiddleware, type WebhookMiddlewareOptions } from './webhooks/middleware.js';
+export type { VerifyOptions } from './webhooks/verify.js';

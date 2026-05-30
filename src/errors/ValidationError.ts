@@ -1,9 +1,11 @@
 import { PayNexusError } from './PayNexusError.js';
 
 export class ValidationError extends PayNexusError {
-  constructor(message: string = 'Validation failed', requestId?: string) {
-    super(message, 400, requestId);
+  readonly errors?: Record<string, string[]>;
+
+  constructor(message: string, errors?: Record<string, string[]>) {
+    super(message, 422, 'validation_error');
     this.name = 'ValidationError';
-    Object.setPrototypeOf(this, ValidationError.prototype);
+    this.errors = errors;
   }
 }

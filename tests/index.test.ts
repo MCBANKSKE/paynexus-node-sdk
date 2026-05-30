@@ -1,64 +1,20 @@
-import PayNexusClient, {
-  HttpClient,
-  PaymentsResource,
-  MerchantResource,
-  WebhooksResource,
-  PayNexusEventEmitter,
-  WebhookVerifier,
-  WebhookConstructor,
-  createWebhookMiddleware,
-  PayNexusError,
-  AuthenticationError,
-  ValidationError,
-  RateLimitError,
-  APIConnectionError,
-  WebhookVerificationError,
-  DEFAULT_CONFIG,
-  SDK_VERSION,
-  PAYMENT_STATUS,
-  WEBHOOK_EVENTS,
-  generateIdempotencyKey,
-  Logger,
-} from '../src/index';
+import { PayNexus } from '../src/index.js';
 
-describe('SDK exports', () => {
-  it('exports PayNexusClient as default', () => {
-    expect(PayNexusClient).toBeDefined();
-    expect(typeof PayNexusClient).toBe('function');
+describe('PayNexus', () => {
+  it('requires secretKey', () => {
+    expect(() => new PayNexus({ secretKey: '' })).toThrow('secretKey is required');
   });
 
-  it('exports all client classes', () => {
-    expect(HttpClient).toBeDefined();
-    expect(PaymentsResource).toBeDefined();
-    expect(MerchantResource).toBeDefined();
-    expect(WebhooksResource).toBeDefined();
-    expect(PayNexusEventEmitter).toBeDefined();
+  it('exposes resource accessors', () => {
+    const client = new PayNexus({ secretKey: 'sk_test_abc' });
+    expect(client.payments).toBeDefined();
+    expect(client.webhooks).toBeDefined();
+    expect(client.merchant).toBeDefined();
+    expect(client.apiKeys).toBeDefined();
   });
 
-  it('exports webhook utilities', () => {
-    expect(WebhookVerifier).toBeDefined();
-    expect(WebhookConstructor).toBeDefined();
-    expect(createWebhookMiddleware).toBeDefined();
-  });
-
-  it('exports all error classes', () => {
-    expect(PayNexusError).toBeDefined();
-    expect(AuthenticationError).toBeDefined();
-    expect(ValidationError).toBeDefined();
-    expect(RateLimitError).toBeDefined();
-    expect(APIConnectionError).toBeDefined();
-    expect(WebhookVerificationError).toBeDefined();
-  });
-
-  it('exports constants', () => {
-    expect(DEFAULT_CONFIG).toBeDefined();
-    expect(SDK_VERSION).toBe('1.0.0');
-    expect(PAYMENT_STATUS).toBeDefined();
-    expect(WEBHOOK_EVENTS).toBeDefined();
-  });
-
-  it('exports utilities', () => {
-    expect(generateIdempotencyKey).toBeDefined();
-    expect(Logger).toBeDefined();
+  it('verifyWebhook throws when webhookSecret is not configured', () => {
+    const client = new PayNexus({ secretKey: 'sk_test_abc' });
+    expect(() => client.verifyWebhook('{}', 'sig', '12345')).toThrow('webhookSecret is required');
   });
 });

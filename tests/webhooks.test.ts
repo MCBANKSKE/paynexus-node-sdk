@@ -1,131 +1,92 @@
-import { createHmac } from 'crypto';
-import { WebhookVerifier } from '../src/webhooks/verifier';
-import { WebhookConstructor } from '../src/webhooks/constructor';
-import { WebhookVerificationError } from '../src/errors/WebhookVerificationError';
+import { createHmac } from 'node:crypto';
+import { verifyWebhookSignature } from '../src/webhooks/verify.js';
+import { WebhookVerificationError } from '../src/errors/WebhookVerificationError.js';
 
-describe('WebhookVerifier', () => {
-  const secret = 'whsec_test_secret_123';
+const SECRET = 'whsec_test_secret_1234567890abcdef';
+
+function sign(body: string, secret: string = SECRET): string {
+  return createHmac('sha256', secret).update(body).digest('hex');
+}
+
+function nowEpoch(): string {
+  return String(Math.floor(Date.now() / 1000));
+}
+
+describe('verifyWebhookSignature', () => {
+  const payload = JSON.stringify({
+    event: 'payment.completed',
+    timestamp: new Date().toISOString(),
+    data: { payment_id: 1, amount: 500 },
+  });
 
   it('verifies a valid signature', () => {
-    const verifier = new WebhookVerifier(secret);
-    const payload = JSON.stringify({ event: 'payment.completed', data: {} });
-    const signature = createHmac('sha256', secret).update(payload).digest('hex');
-
-    expect(verifier.verify(payload, signature)).toBe(true);
+    const sig = sign(payload);
+    const ts = nowEpoch();
+    const result = verifyWebhookSignature(payload, sig, ts, SECRET);
+    expect(result.event).toBe('payment.completed');
+    expect(result.data.payment_id).toBe(1);
   });
 
-  it('rejects an invalid signature', () => {
-    const verifier = new WebhookVerifier(secret);
-    const payload = JSON.stringify({ event: 'payment.completed', data: {} });
-
-    expect(verifier.verify(payload, 'invalid_signature')).toBe(false);
+  it('rejects wrong signature', () => {
+    const ts = nowEpoch();
+    expect(() => verifyWebhookSignature(payload, 'badsig', ts, SECRET)).toThrow(WebhookVerificationError);
+    expect(() => verifyWebhookSignature(payload, 'badsig', ts, SECRET)).toThrow('Signature mismatch');
   });
 
-  it('rejects when signature is empty', () => {
-    const verifier = new WebhookVerifier(secret);
-    const payload = JSON.stringify({ event: 'payment.completed' });
-
-    expect(verifier.verify(payload, '')).toBe(false);
+  it('rejects wrong secret', () => {
+    const sig = sign(payload, 'wrong_secret');
+    const ts = nowEpoch();
+    expect(() => verifyWebhookSignature(payload, sig, ts, SECRET)).toThrow('Signature mismatch');
   });
 
-  it('allows any signature in dev mode (no secret)', () => {
-    const verifier = new WebhookVerifier('');
-    const payload = JSON.stringify({ event: 'payment.completed' });
-
-    expect(verifier.verify(payload, 'any_signature')).toBe(true);
+  it('rejects tampered body', () => {
+    const sig = sign(payload);
+    const ts = nowEpoch();
+    const tampered = payload.replace('500', '999');
+    expect(() => verifyWebhookSignature(tampered, sig, ts, SECRET)).toThrow('Signature mismatch');
   });
 
-  it('calculates signature using HMAC-SHA256 with the secret', () => {
-    const verifier = new WebhookVerifier(secret);
-    const payload = 'test_payload';
-    const expected = createHmac('sha256', secret).update(payload).digest('hex');
-
-    expect(verifier.calculateSignature(payload)).toBe(expected);
+  it('rejects expired timestamp', () => {
+    const sig = sign(payload);
+    const oldTs = String(Math.floor(Date.now() / 1000) - 600); // 10 min ago
+    expect(() => verifyWebhookSignature(payload, sig, oldTs, SECRET)).toThrow('too old');
   });
 
-  it('produces different signatures for different secrets', () => {
-    const verifier1 = new WebhookVerifier('secret_a');
-    const verifier2 = new WebhookVerifier('secret_b');
-    const payload = 'same_payload';
-
-    expect(verifier1.calculateSignature(payload)).not.toBe(
-      verifier2.calculateSignature(payload)
-    );
+  it('accepts timestamp within custom tolerance', () => {
+    const sig = sign(payload);
+    const ts = String(Math.floor(Date.now() / 1000) - 400); // 6m40s ago
+    // Default 5min tolerance should reject, but 10min should accept
+    expect(() => verifyWebhookSignature(payload, sig, ts, SECRET)).toThrow('too old');
+    const result = verifyWebhookSignature(payload, sig, ts, SECRET, { tolerance: 600_000 });
+    expect(result.event).toBe('payment.completed');
   });
 
-  describe('validateTimestamp', () => {
-    it('accepts a recent timestamp', () => {
-      const verifier = new WebhookVerifier(secret);
-      const timestamp = Date.now().toString();
-
-      expect(verifier.validateTimestamp(timestamp)).toBe(true);
-    });
-
-    it('rejects an old timestamp', () => {
-      const verifier = new WebhookVerifier(secret);
-      const oldTimestamp = (Date.now() - 600000).toString(); // 10 minutes ago
-
-      expect(verifier.validateTimestamp(oldTimestamp)).toBe(false);
-    });
-
-    it('allows null timestamp', () => {
-      const verifier = new WebhookVerifier(secret);
-
-      expect(verifier.validateTimestamp(null)).toBe(true);
-    });
-
-    it('respects custom tolerance', () => {
-      const verifier = new WebhookVerifier(secret);
-      const timestamp = (Date.now() - 2000).toString(); // 2 seconds ago
-
-      expect(verifier.validateTimestamp(timestamp, 1000)).toBe(false);
-      expect(verifier.validateTimestamp(timestamp, 5000)).toBe(true);
-    });
-  });
-});
-
-describe('WebhookConstructor', () => {
-  const secret = 'whsec_test_secret';
-
-  it('constructs a valid event', () => {
-    const constructor = new WebhookConstructor(secret);
-    const payload = JSON.stringify({
-      event: 'payment.completed',
-      data: { payment: { amount: 1000 }, transaction_id: 'tx_123', provider_reference: 'ref_456' },
-    });
-    const signature = createHmac('sha256', secret).update(payload).digest('hex');
-
-    const event = constructor.constructEvent(payload, signature);
-    expect(event.event).toBe('payment.completed');
+  it('rejects invalid timestamp', () => {
+    const sig = sign(payload);
+    expect(() => verifyWebhookSignature(payload, sig, 'notanumber', SECRET)).toThrow('Invalid timestamp');
   });
 
-  it('throws on invalid signature', () => {
-    const constructor = new WebhookConstructor(secret);
-    const payload = JSON.stringify({ event: 'payment.completed', data: {} });
-
-    expect(() => constructor.constructEvent(payload, 'bad_sig')).toThrow(
-      WebhookVerificationError
-    );
+  it('rejects missing body', () => {
+    expect(() => verifyWebhookSignature('', 'sig', nowEpoch(), SECRET)).toThrow('Missing webhook body');
   });
 
-  it('throws on invalid JSON payload', () => {
-    const constructor = new WebhookConstructor(secret);
-    const payload = 'not-json';
-    const signature = createHmac('sha256', secret).update(payload).digest('hex');
-
-    expect(() => constructor.constructEvent(payload, signature)).toThrow(
-      WebhookVerificationError
-    );
+  it('rejects missing signature', () => {
+    expect(() => verifyWebhookSignature(payload, '', nowEpoch(), SECRET)).toThrow('Missing X-PayNexus-Signature');
   });
 
-  it('validates timestamp when provided', () => {
-    const constructor = new WebhookConstructor(secret);
-    const payload = JSON.stringify({ event: 'payment.completed', data: {} });
-    const signature = createHmac('sha256', secret).update(payload).digest('hex');
-    const oldTimestamp = (Date.now() - 600000).toString();
+  it('rejects missing timestamp', () => {
+    const sig = sign(payload);
+    expect(() => verifyWebhookSignature(payload, sig, '', SECRET)).toThrow('Missing X-PayNexus-Timestamp');
+  });
 
-    expect(() => constructor.constructEvent(payload, signature, oldTimestamp)).toThrow(
-      WebhookVerificationError
-    );
+  it('rejects missing secret', () => {
+    const sig = sign(payload);
+    expect(() => verifyWebhookSignature(payload, sig, nowEpoch(), '')).toThrow('Missing webhook secret');
+  });
+
+  it('rejects invalid JSON body (valid sig but bad JSON)', () => {
+    const bad = 'not json';
+    const sig = sign(bad);
+    expect(() => verifyWebhookSignature(bad, sig, nowEpoch(), SECRET)).toThrow('Invalid JSON');
   });
 });

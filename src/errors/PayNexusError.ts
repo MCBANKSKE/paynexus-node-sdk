@@ -1,11 +1,12 @@
 export class PayNexusError extends Error {
-  constructor(
-    message: string,
-    public statusCode?: number,
-    public requestId?: string
-  ) {
+  readonly status?: number;
+  readonly code?: string;
+
+  constructor(message: string, status?: number, code?: string) {
     super(message);
     this.name = 'PayNexusError';
-    Object.setPrototypeOf(this, PayNexusError.prototype);
+    this.status = status;
+    this.code = code;
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 }

@@ -1,9 +1,8 @@
 import { PayNexusError } from './PayNexusError.js';
 
 export class WebhookVerificationError extends PayNexusError {
-  constructor(message: string = 'Webhook signature verification failed', requestId?: string) {
-    super(message, 403, requestId);
+  constructor(message = 'Webhook signature verification failed') {
+    super(message, 400, 'webhook_verification_error');
     this.name = 'WebhookVerificationError';
-    Object.setPrototypeOf(this, WebhookVerificationError.prototype);
   }
 }

@@ -3,86 +3,53 @@ import {
   AuthenticationError,
   ValidationError,
   RateLimitError,
-  APIConnectionError,
+  NotFoundError,
   WebhookVerificationError,
-} from '../src/errors';
+} from '../src/errors/index.js';
 
-describe('Error classes', () => {
-  describe('PayNexusError', () => {
-    it('sets message and name', () => {
-      const error = new PayNexusError('test error');
-      expect(error.message).toBe('test error');
-      expect(error.name).toBe('PayNexusError');
-      expect(error).toBeInstanceOf(Error);
-    });
-
-    it('sets statusCode and requestId', () => {
-      const error = new PayNexusError('test', 500, 'req_123');
-      expect(error.statusCode).toBe(500);
-      expect(error.requestId).toBe('req_123');
-    });
+describe('Error hierarchy', () => {
+  it('PayNexusError has status and code', () => {
+    const err = new PayNexusError('boom', 500, 'internal');
+    expect(err.message).toBe('boom');
+    expect(err.status).toBe(500);
+    expect(err.code).toBe('internal');
+    expect(err).toBeInstanceOf(Error);
+    expect(err).toBeInstanceOf(PayNexusError);
+    expect(err.name).toBe('PayNexusError');
   });
 
-  describe('AuthenticationError', () => {
-    it('has correct defaults', () => {
-      const error = new AuthenticationError();
-      expect(error.message).toBe('Authentication failed');
-      expect(error.name).toBe('AuthenticationError');
-      expect(error.statusCode).toBe(401);
-      expect(error).toBeInstanceOf(PayNexusError);
-    });
-
-    it('accepts custom message and requestId', () => {
-      const error = new AuthenticationError('Bad key', 'req_abc');
-      expect(error.message).toBe('Bad key');
-      expect(error.requestId).toBe('req_abc');
-    });
+  it('AuthenticationError defaults', () => {
+    const err = new AuthenticationError();
+    expect(err.status).toBe(401);
+    expect(err.code).toBe('authentication_error');
+    expect(err).toBeInstanceOf(PayNexusError);
+    expect(err.name).toBe('AuthenticationError');
   });
 
-  describe('ValidationError', () => {
-    it('has correct defaults', () => {
-      const error = new ValidationError();
-      expect(error.message).toBe('Validation failed');
-      expect(error.statusCode).toBe(400);
-      expect(error).toBeInstanceOf(PayNexusError);
-    });
+  it('ValidationError carries field errors', () => {
+    const errors = { phone: ['Invalid phone number'] };
+    const err = new ValidationError('Validation failed', errors);
+    expect(err.status).toBe(422);
+    expect(err.errors).toEqual(errors);
+    expect(err).toBeInstanceOf(PayNexusError);
   });
 
-  describe('RateLimitError', () => {
-    it('has correct defaults', () => {
-      const error = new RateLimitError();
-      expect(error.message).toBe('Rate limit exceeded');
-      expect(error.statusCode).toBe(429);
-      expect(error).toBeInstanceOf(PayNexusError);
-    });
+  it('RateLimitError defaults', () => {
+    const err = new RateLimitError();
+    expect(err.status).toBe(429);
+    expect(err.name).toBe('RateLimitError');
   });
 
-  describe('APIConnectionError', () => {
-    it('has correct defaults', () => {
-      const error = new APIConnectionError();
-      expect(error.message).toBe('Unable to connect to PayNexus API');
-      expect(error.statusCode).toBe(503);
-      expect(error).toBeInstanceOf(PayNexusError);
-    });
+  it('NotFoundError defaults', () => {
+    const err = new NotFoundError();
+    expect(err.status).toBe(404);
+    expect(err.name).toBe('NotFoundError');
   });
 
-  describe('WebhookVerificationError', () => {
-    it('has correct defaults', () => {
-      const error = new WebhookVerificationError();
-      expect(error.message).toBe('Webhook signature verification failed');
-      expect(error.statusCode).toBe(403);
-      expect(error).toBeInstanceOf(PayNexusError);
-    });
-  });
-
-  it('instanceof checks work through prototype chain', () => {
-    const authError = new AuthenticationError();
-    expect(authError instanceof AuthenticationError).toBe(true);
-    expect(authError instanceof PayNexusError).toBe(true);
-    expect(authError instanceof Error).toBe(true);
-
-    const validationError = new ValidationError();
-    expect(validationError instanceof ValidationError).toBe(true);
-    expect(validationError instanceof PayNexusError).toBe(true);
+  it('WebhookVerificationError defaults', () => {
+    const err = new WebhookVerificationError();
+    expect(err.status).toBe(400);
+    expect(err.code).toBe('webhook_verification_error');
+    expect(err.name).toBe('WebhookVerificationError');
   });
 });

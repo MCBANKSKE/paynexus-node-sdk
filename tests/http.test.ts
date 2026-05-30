@@ -1,79 +1,166 @@
-import axios from 'axios';
-import { HttpClient } from '../src/client/http';
-import { AuthenticationError } from '../src/errors/AuthenticationError';
-import { ValidationError } from '../src/errors/ValidationError';
-import { RateLimitError } from '../src/errors/RateLimitError';
-import { APIConnectionError } from '../src/errors/APIConnectionError';
+import { jest } from '@jest/globals';
+import { HttpClient } from '../src/http.js';
+import { AuthenticationError, NotFoundError, ValidationError, RateLimitError, PayNexusError } from '../src/errors/index.js';
 
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+// Mock global fetch
+const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
+global.fetch = mockFetch;
+
+function jsonResponse(status: number, body: unknown): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    headers: new Headers(),
+  } as Response;
+}
 
 describe('HttpClient', () => {
-  let mockAxiosInstance: any;
+  let http: HttpClient;
 
   beforeEach(() => {
-    mockAxiosInstance = {
-      request: jest.fn(),
-      interceptors: {
-        request: { use: jest.fn() },
-        response: { use: jest.fn() },
-      },
-    };
-    mockedAxios.create.mockReturnValue(mockAxiosInstance);
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('creates an axios instance with correct config', () => {
-    new HttpClient('sk_test', 'https://api.example.com', 5000, 1, 'error');
-
-    expect(mockedAxios.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        baseURL: 'https://api.example.com',
-        timeout: 5000,
-      })
-    );
-  });
-
-  it('sets up request and response interceptors', () => {
-    new HttpClient('sk_test', 'https://api.example.com');
-
-    expect(mockAxiosInstance.interceptors.request.use).toHaveBeenCalled();
-    expect(mockAxiosInstance.interceptors.response.use).toHaveBeenCalled();
-  });
-
-  it('makes a successful request', async () => {
-    mockAxiosInstance.request.mockResolvedValueOnce({
-      data: { success: true, data: { id: 1 } },
-      config: { headers: { 'X-Request-ID': 'req_123' } },
+    mockFetch.mockReset();
+    http = new HttpClient({
+      baseUrl: 'https://api.paynexus.co.ke/api',
+      secretKey: 'sk_test_abc123',
+      timeout: 5000,
     });
-
-    const client = new HttpClient('sk_test', 'https://api.example.com');
-    const result = await client.request({ method: 'GET', url: '/test' });
-
-    expect(result.data).toEqual({ success: true, data: { id: 1 } });
-    expect(result.requestId).toBe('req_123');
   });
 
-  it('uses a custom axios instance when provided', () => {
-    const customInstance = {
-      request: jest.fn(),
-      interceptors: {
-        request: { use: jest.fn() },
-        response: { use: jest.fn() },
-      },
-    } as any;
+  it('sends GET with correct headers', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse(200, { success: true, data: { id: 1 } }));
 
-    new HttpClient('sk_test', 'https://api.example.com', 30000, 2, 'info', customInstance);
+    const result = await http.get('/merchant');
 
-    // Should NOT call axios.create since a custom instance is provided
-    expect(mockedAxios.create).not.toHaveBeenCalled();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://api.paynexus.co.ke/api/merchant');
+    expect((init?.headers as Record<string, string>)['X-API-Key']).toBe('sk_test_abc123');
+    expect((init?.headers as Record<string, string>)['Accept']).toBe('application/json');
+    expect((init?.headers as Record<string, string>)['Content-Type']).toBe('application/json');
+    expect(init?.method).toBe('GET');
+    expect(result.success).toBe(true);
   });
 
-  it('exposes the underlying axios instance', () => {
-    const client = new HttpClient('sk_test', 'https://api.example.com');
-    expect(client.getAxiosInstance()).toBe(mockAxiosInstance);
+  it('sends GET with query params', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse(200, { success: true, data: [] }));
+
+    await http.get('/payments', { status: 'completed', per_page: 10 });
+
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toContain('status=completed');
+    expect(url).toContain('per_page=10');
+  });
+
+  it('sends POST with JSON body', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse(200, { success: true, data: { payment_id: 42 } }));
+
+    await http.post('/payments/initiate', { amount: 100, phone: '254712345678' });
+
+    const [, init] = mockFetch.mock.calls[0];
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(init?.body as string)).toEqual({ amount: 100, phone: '254712345678' });
+  });
+
+  it('sends PUT with JSON body', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse(200, { success: true }));
+
+    await http.put('/webhooks/1', { name: 'updated' });
+
+    const [, init] = mockFetch.mock.calls[0];
+    expect(init?.method).toBe('PUT');
+  });
+
+  it('sends DELETE', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse(200, { success: true }));
+
+    await http.delete('/webhooks/1');
+
+    const [, init] = mockFetch.mock.calls[0];
+    expect(init?.method).toBe('DELETE');
+    expect(init?.body).toBeUndefined();
+  });
+
+  it('throws AuthenticationError on 401', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse(401, { success: false, error: 'Unauthorized', message: 'Invalid API key' }));
+
+    await expect(http.get('/merchant')).rejects.toThrow(AuthenticationError);
+  });
+
+  it('throws NotFoundError on 404', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse(404, { success: false, error: 'Not found' }));
+
+    await expect(http.get('/payments/nonexistent')).rejects.toThrow(NotFoundError);
+  });
+
+  it('throws ValidationError on 422', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse(422, {
+      success: false,
+      error: 'Validation failed',
+      message: 'amount is required',
+      errors: { amount: ['The amount field is required'] },
+    }));
+
+    try {
+      await http.post('/payments/initiate', {});
+      fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ValidationError);
+      expect((err as ValidationError).errors).toEqual({ amount: ['The amount field is required'] });
+    }
+  });
+
+  it('throws RateLimitError on 429', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse(429, { message: 'Too many requests' }));
+
+    await expect(http.get('/merchant')).rejects.toThrow(RateLimitError);
+  });
+
+  it('throws PayNexusError on other status codes', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse(500, { message: 'Internal error' }));
+
+    try {
+      await http.get('/merchant');
+      fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(PayNexusError);
+      expect((err as PayNexusError).status).toBe(500);
+    }
+  });
+
+  it('throws on network failure', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+
+    try {
+      await http.get('/merchant');
+      fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(PayNexusError);
+      expect((err as PayNexusError).code).toBe('network_error');
+    }
+  });
+
+  it('omits undefined query params', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse(200, { success: true, data: [] }));
+
+    await http.get('/payments', { status: undefined, per_page: 20 });
+
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).not.toContain('status');
+    expect(url).toContain('per_page=20');
+  });
+
+  it('strips trailing slash from base URL', async () => {
+    const client = new HttpClient({
+      baseUrl: 'https://api.paynexus.co.ke/api/',
+      secretKey: 'sk_test',
+      timeout: 5000,
+    });
+    mockFetch.mockResolvedValueOnce(jsonResponse(200, { success: true }));
+
+    await client.get('/merchant');
+
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://api.paynexus.co.ke/api/merchant');
   });
 });
